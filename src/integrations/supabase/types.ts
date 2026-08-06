@@ -14,16 +14,202 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      leads: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          joined_whatsapp: boolean
+          mobile: string
+          name: string
+          notes: string | null
+          source: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          joined_whatsapp?: boolean
+          mobile: string
+          name: string
+          notes?: string | null
+          source?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          joined_whatsapp?: boolean
+          mobile?: string
+          name?: string
+          notes?: string | null
+          source?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          email: string | null
+          full_name: string | null
+          id: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id?: string
+        }
+        Relationships: []
+      }
+      properties: {
+        Row: {
+          area: string | null
+          bathrooms: number
+          bedrooms: number
+          created_at: string
+          description: string | null
+          featured: boolean
+          id: string
+          image_url: string | null
+          location: string
+          price: string
+          property_type: string
+          published: boolean
+          sort_order: number
+          status: string
+          title: string
+        }
+        Insert: {
+          area?: string | null
+          bathrooms?: number
+          bedrooms?: number
+          created_at?: string
+          description?: string | null
+          featured?: boolean
+          id?: string
+          image_url?: string | null
+          location: string
+          price: string
+          property_type?: string
+          published?: boolean
+          sort_order?: number
+          status?: string
+          title: string
+        }
+        Update: {
+          area?: string | null
+          bathrooms?: number
+          bedrooms?: number
+          created_at?: string
+          description?: string | null
+          featured?: boolean
+          id?: string
+          image_url?: string | null
+          location?: string
+          price?: string
+          property_type?: string
+          published?: boolean
+          sort_order?: number
+          status?: string
+          title?: string
+        }
+        Relationships: []
+      }
+      site_settings: {
+        Row: {
+          key: string
+          updated_at: string
+          value: string
+        }
+        Insert: {
+          key: string
+          updated_at?: string
+          value?: string
+        }
+        Update: {
+          key?: string
+          updated_at?: string
+          value?: string
+        }
+        Relationships: []
+      }
+      site_videos: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          published: boolean
+          section: string
+          sort_order: number
+          title: string
+          video_url: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          published?: boolean
+          section?: string
+          sort_order?: number
+          title: string
+          video_url: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          published?: boolean
+          section?: string
+          sort_order?: number
+          title?: string
+          video_url?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      is_staff: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "super_admin" | "admin"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +336,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["super_admin", "admin"],
+    },
   },
 } as const
