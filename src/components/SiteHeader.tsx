@@ -8,15 +8,26 @@ import { settingsQuery, WHATSAPP_FALLBACK } from "@/lib/site-data";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 
-const NAV = [
-  { label: "Home", to: "/", hash: undefined },
+type NavEntry = { label: string; to: string; hash?: string; search?: { intent: string } };
+
+const NAV: NavEntry[] = [
+  { label: "Home", to: "/" },
   { label: "Buy", to: "/properties", search: { intent: "buy" } },
   { label: "Rent", to: "/properties", search: { intent: "rent" } },
   { label: "Projects", to: "/", hash: "showcase" },
   { label: "Services", to: "/", hash: "services" },
   { label: "About", to: "/", hash: "about" },
-  { label: "Contact", to: "/contact", hash: undefined },
-] as const;
+  { label: "Contact", to: "/contact" },
+];
+
+function navLinkProps(item: NavEntry) {
+  return {
+    to: item.to,
+    ...(item.hash ? { hash: item.hash } : {}),
+    ...(item.search ? { search: item.search } : {}),
+  } as React.ComponentProps<typeof Link>;
+}
+
 
 export function SiteHeader() {
   const [open, setOpen] = useState(false);
