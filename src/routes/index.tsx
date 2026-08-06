@@ -114,7 +114,7 @@ function Home() {
             </h1>
             <p className="mt-6 max-w-xl text-base opacity-85 md:text-lg">{heroSubtitle}</p>
             <div className="mt-9 flex flex-wrap gap-3">
-              <Button asChild size="lg">
+              <Button asChild size="lg" variant="gold">
                 <Link to="/properties" search={{ intent: "buy" }}>
                   Explore listings <ArrowRight className="size-4" />
                 </Link>
