@@ -55,7 +55,10 @@ function AuthPage() {
     if (mode === "signin") {
       const { error } = await supabase.auth.signInWithPassword(parsed.data);
       setBusy(false);
-      if (error) return toast.error(error.message);
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
       navigate({ to: "/admin" });
       return;
     }
@@ -64,7 +67,10 @@ function AuthPage() {
       options: { emailRedirectTo: `${window.location.origin}/admin` },
     });
     setBusy(false);
-    if (error) return toast.error(error.message);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
     toast.success("Account created. You can sign in now.");
     setMode("signin");
   };
