@@ -209,7 +209,7 @@ function AdminPage() {
                       aria-label="Delete listing"
                       onClick={async () => {
                         const { error } = await supabase.from("properties").delete().eq("id", property.id);
-                        if (error) return toast.error(error.message);
+                        if (error) { toast.error(error.message); return; }
                         toast.success("Listing removed");
                         qc.invalidateQueries({ queryKey: ["properties"] });
                       }}
@@ -225,7 +225,7 @@ function AdminPage() {
                           .from("properties")
                           .update({ published: checked })
                           .eq("id", property.id);
-                        if (error) return toast.error(error.message);
+                        if (error) { toast.error(error.message); return; }
                         qc.invalidateQueries({ queryKey: ["properties"] });
                       }}
                     />
@@ -256,7 +256,7 @@ function AdminPage() {
                         .from("site_videos")
                         .update({ published: checked })
                         .eq("id", video.id);
-                      if (error) return toast.error(error.message);
+                      if (error) { toast.error(error.message); return; }
                       qc.invalidateQueries({ queryKey: ["site_videos"] });
                     }}
                   />
@@ -322,7 +322,7 @@ function SettingField({ settingKey, value }: { settingKey: string; value: string
             .update({ value: draft })
             .eq("key", settingKey);
           setSaving(false);
-          if (error) return toast.error(error.message);
+          if (error) { toast.error(error.message); return; }
           toast.success("Saved");
           qc.invalidateQueries({ queryKey: ["site_settings"] });
         }}
@@ -392,7 +392,7 @@ function NewPropertyForm({ onDone }: { onDone: () => void }) {
           published: true,
         });
         setSaving(false);
-        if (error) return toast.error(error.message);
+        if (error) { toast.error(error.message); return; }
         toast.success("Listing added");
         setOpen(false);
         onDone();
