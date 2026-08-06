@@ -25,7 +25,7 @@ function navLinkProps(item: NavEntry) {
     to: item.to,
     ...(item.hash ? { hash: item.hash } : {}),
     ...(item.search ? { search: item.search } : {}),
-  } as React.ComponentProps<typeof Link>;
+  } as unknown as React.ComponentProps<typeof Link>;
 }
 
 
@@ -74,9 +74,7 @@ export function SiteHeader() {
           {NAV.map((item) => (
             <Link
               key={item.label}
-              to={item.to}
-              hash={"hash" in item ? item.hash : undefined}
-              search={"search" in item ? (item.search as never) : undefined}
+              {...navLinkProps(item)}
               className="text-sm text-foreground/80 transition-colors hover:text-foreground"
             >
               {item.label}
@@ -112,9 +110,7 @@ export function SiteHeader() {
             {NAV.map((item) => (
               <Link
                 key={item.label}
-                to={item.to}
-                hash={"hash" in item ? item.hash : undefined}
-                search={"search" in item ? (item.search as never) : undefined}
+                {...navLinkProps(item)}
                 onClick={() => setOpen(false)}
                 className="border-b border-border/60 py-3 text-sm"
               >
