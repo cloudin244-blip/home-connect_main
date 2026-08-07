@@ -28,7 +28,16 @@ import { SiteFooter } from "@/components/SiteFooter";
 import { VoiceBot } from "@/components/VoiceBot";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { propertiesQuery, settingsQuery, videosQuery, WHATSAPP_FALLBACK } from "@/lib/site-data";
+import { LocationMap } from "@/components/LocationMap";
+import { EnquiryForm } from "@/components/EnquiryForm";
+import { PropertyCard } from "@/components/PropertyCard";
+import {
+  CONTACT_FALLBACK,
+  propertiesQuery,
+  settingsQuery,
+  videosQuery,
+  WHATSAPP_FALLBACK,
+} from "@/lib/site-data";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -193,48 +202,7 @@ function Home() {
 
             <div className="mt-12 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {featured.slice(0, 6).map((property) => (
-                <article
-                  key={property.id}
-                  className="overflow-hidden rounded-lg border border-border bg-card shadow-card"
-                >
-                  <div className="relative aspect-[3/2] overflow-hidden bg-muted">
-                    {property.image_url && (
-                      <img
-                        src={property.image_url}
-                        alt={property.title}
-                        loading="lazy"
-                        width={1280}
-                        height={854}
-                        className="size-full object-cover transition-transform duration-700 hover:scale-105"
-                      />
-                    )}
-                    <Badge className="absolute left-4 top-4">{property.status}</Badge>
-                  </div>
-                  <div className="p-5">
-                    <h3 className="font-display text-xl">{property.title}</h3>
-                    <p className="mt-1 flex items-center gap-1.5 text-sm text-muted-foreground">
-                      <MapPin className="size-3.5 text-accent" /> {property.location}
-                    </p>
-                    <p className="mt-4 font-display text-2xl text-accent">{property.price}</p>
-                    <div className="mt-4 flex flex-wrap gap-4 border-t border-border pt-4 text-xs text-muted-foreground">
-                      {property.bedrooms > 0 && (
-                        <span className="flex items-center gap-1.5">
-                          <BedDouble className="size-3.5" /> {property.bedrooms} Beds
-                        </span>
-                      )}
-                      {property.bathrooms > 0 && (
-                        <span className="flex items-center gap-1.5">
-                          <Bath className="size-3.5" /> {property.bathrooms} Baths
-                        </span>
-                      )}
-                      {property.area && (
-                        <span className="flex items-center gap-1.5">
-                          <Ruler className="size-3.5" /> {property.area}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </article>
+                <PropertyCard key={property.id} property={property} />
               ))}
             </div>
           </div>
@@ -292,7 +260,7 @@ function Home() {
                 That is when we knew we had the right advisors.”
               </p>
               <p className="text-xs tracking-wide opacity-70">
-                Anita &amp; Vivek R. — bought a 3BHK in Noida
+                A Prime Pure client, Bengaluru
               </p>
               <Button asChild variant="outline" className="w-fit">
                 <a href={whatsapp} target="_blank" rel="noreferrer">
@@ -300,6 +268,95 @@ function Home() {
                 </a>
               </Button>
             </div>
+          </div>
+        </section>
+
+        {/* OFFICES & MAPS */}
+        <section id="locations" className="mx-auto max-w-7xl px-6 py-24">
+          <div className="max-w-2xl">
+            <p className="text-eyebrow">Visit us</p>
+            <h2 className="mt-3 font-display text-4xl md:text-5xl">Two offices, one standard</h2>
+            <p className="mt-4 text-muted-foreground">
+              Walk in for a consultation at our Bangalore or Noida office — or ask us to come to you.
+            </p>
+          </div>
+          <div className="mt-12 grid gap-6 lg:grid-cols-2">
+            <LocationMap
+              title="Bangalore — Electronic City Phase-2"
+              address={settings?.["address_2"] ?? CONTACT_FALLBACK.address2}
+              query={settings?.["map_query_2"] ?? CONTACT_FALLBACK.map2}
+            />
+            <LocationMap
+              title="Noida — Sector 62"
+              address={settings?.["address"] ?? CONTACT_FALLBACK.address}
+              query={settings?.["map_query_1"] ?? CONTACT_FALLBACK.map1}
+            />
+          </div>
+        </section>
+
+        {/* ENQUIRY */}
+        <section id="enquire" className="border-y border-border bg-secondary/50 py-24">
+          <div className="mx-auto grid max-w-7xl gap-12 px-6 lg:grid-cols-2">
+            <div>
+              <p className="text-eyebrow">Talk to an advisor</p>
+              <h2 className="mt-3 font-display text-4xl md:text-5xl">Tell us what you are looking for</h2>
+              <p className="mt-4 text-muted-foreground">
+                Share your budget and preferred locality. We revert within one working day with a
+                shortlist, a full cost sheet and site-visit slots — no spam, no pressure.
+              </p>
+              <dl className="mt-8 space-y-4 text-sm">
+                <div>
+                  <dt className="text-muted-foreground">Sales desk</dt>
+                  <dd className="font-display text-2xl tabular-nums text-accent">
+                    {settings?.["phone"] ?? CONTACT_FALLBACK.phone}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-muted-foreground">Alternate line</dt>
+                  <dd className="font-display text-2xl tabular-nums text-accent">
+                    {settings?.["phone_2"] ?? CONTACT_FALLBACK.phone2}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-muted-foreground">Email</dt>
+                  <dd className="text-base">{settings?.["email"] ?? CONTACT_FALLBACK.email}</dd>
+                </div>
+              </dl>
+            </div>
+            <div className="rounded-lg border border-border bg-card p-7 shadow-card">
+              <EnquiryForm />
+            </div>
+          </div>
+        </section>
+
+        {/* FAQ */}
+        <section id="faq" className="mx-auto max-w-4xl px-6 py-24">
+          <p className="text-eyebrow">Good to know</p>
+          <h2 className="mt-3 font-display text-4xl md:text-5xl">Frequently asked questions</h2>
+          <div className="mt-10 divide-y divide-border border-y border-border">
+            {[
+              {
+                q: "Do you charge brokerage?",
+                a: "On most developer-tied projects there is zero brokerage for the buyer. For resale and rentals we share the exact fee in writing before you commit.",
+              },
+              {
+                q: "Are the listings RERA-verified?",
+                a: "Yes. Every project on this portal carries a RERA number and a verified title. We share the approval set before any token payment.",
+              },
+              {
+                q: "Can I book a site visit on a weekend?",
+                a: "Absolutely. Weekend and evening visits are our busiest slots — request a callback and we will arrange pickup where possible.",
+              },
+              {
+                q: "Do you help NRI buyers?",
+                a: "We run remote video tours, handle power-of-attorney documentation and guide repatriation of sale proceeds.",
+              },
+            ].map((item) => (
+              <details key={item.q} className="group py-5">
+                <summary className="cursor-pointer list-none font-display text-xl">{item.q}</summary>
+                <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{item.a}</p>
+              </details>
+            ))}
           </div>
         </section>
       </main>
