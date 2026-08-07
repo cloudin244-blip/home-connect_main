@@ -134,14 +134,6 @@ function Home() {
                 </a>
               </Button>
             </div>
-            <dl className="mt-16 grid max-w-3xl grid-cols-2 gap-8 border-t border-primary-foreground/20 pt-8 md:grid-cols-4">
-              {STATS.map((stat) => (
-                <div key={stat.label}>
-                  <dt className="font-display text-3xl text-accent">{stat.value}</dt>
-                  <dd className="mt-1 text-xs tracking-wide opacity-75">{stat.label}</dd>
-                </div>
-              ))}
-            </dl>
           </div>
         </section>
 
@@ -182,6 +174,18 @@ function Home() {
                 </div>
               </article>
             ))}
+          </div>
+
+          {/* STATS — moved below videos */}
+          <div className="mt-16 border-t border-border pt-12">
+            <dl className="grid max-w-4xl grid-cols-2 gap-8 md:grid-cols-4">
+              {STATS.map((stat) => (
+                <div key={stat.label}>
+                  <dt className="font-display text-4xl font-bold text-accent md:text-5xl">{stat.value}</dt>
+                  <dd className="mt-3 text-sm font-medium tracking-wide text-foreground">{stat.label}</dd>
+                </div>
+              ))}
+            </dl>
           </div>
         </section>
 
@@ -256,8 +260,8 @@ function Home() {
             <div className="flex flex-col justify-center gap-6 rounded-lg border border-primary-foreground/15 p-8">
               <Handshake className="size-8 text-accent" />
               <p className="font-display text-2xl leading-snug">
-                “They talked us out of a property we loved because the approvals were incomplete.
-                That is when we knew we had the right advisors.”
+                "They talked us out of a property we loved because the approvals were incomplete.
+                That is when we knew we had the right advisors."
               </p>
               <p className="text-xs tracking-wide opacity-70">
                 A Prime Pure client, Bengaluru
