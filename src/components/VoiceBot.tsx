@@ -1,6 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Loader2, Mic, MessageCircle, Square, Volume2, X, Sparkles } from "lucide-react";
+import {
+  Keyboard,
+  Loader2,
+  Mic,
+  MessageCircle,
+  Square,
+  Volume2,
+  X,
+  Sparkles,
+} from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 
@@ -9,9 +18,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { settingsQuery, WHATSAPP_FALLBACK } from "@/lib/site-data";
-import { cn } from "@/lib/utils";
 
-type Step = "intro" | "name" | "mobile" | "email" | "review" | "done";
+type Mode = "choose" | "manual" | "voice";
+type Step = "name" | "mobile" | "email" | "review" | "done";
 
 const leadSchema = z.object({
   name: z.string().trim().min(2, "Please enter your full name").max(80),
@@ -23,13 +32,19 @@ const leadSchema = z.object({
 });
 
 const PROMPTS: Record<Step, string> = {
-  intro:
-    "Namaste! I am Pure, the Prime Pure property assistant. I can add you to our WhatsApp community for early access to new listings. Shall we start with your name?",
-  name: "Please say your full name after the beep.",
+  name: "Namaste! I am Pure, the Prime Pure property assistant. Please say your full name after the beep.",
   mobile: "Thank you. Now please say your mobile number, digit by digit.",
   email: "Great. Finally, please say your email address.",
   review: "Here is what I noted. Please check it, then tap join to enter our WhatsApp community.",
   done: "Wonderful. You are all set — welcome to the Prime Pure community.",
+};
+
+const LABELS: Record<Step, string> = {
+  name: "What is your full name?",
+  mobile: "What is your mobile number?",
+  email: "What is your email address?",
+  review: "Please review your details, then join our WhatsApp community.",
+  done: "You are all set — welcome to the Prime Pure community.",
 };
 
 function cleanEmail(raw: string) {
@@ -61,7 +76,8 @@ export function VoiceBot() {
   const whatsapp = settings?.["whatsapp_community_url"] ?? WHATSAPP_FALLBACK;
 
   const [open, setOpen] = useState(false);
-  const [step, setStep] = useState<Step>("intro");
+  const [mode, setMode] = useState<Mode>("choose");
+  const [step, setStep] = useState<Step>("name");
   const [speaking, setSpeaking] = useState(false);
   const [recording, setRecording] = useState(false);
   const [thinking, setThinking] = useState(false);
@@ -72,8 +88,13 @@ export function VoiceBot() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
-  const spokenRef = useRef<Set<string>>(new Set());
+  const handledRef = useRef<Set<string>>(new Set());
+  const stepRef = useRef<Step>("name");
+  const startRef = useRef<() => Promise<void>>(async () => {});
 
+  stepRef.current = step;
+
+  /** Speaks text and resolves once playback finishes (or fails). */
   const speak = useCallback(async (text: string) => {
     try {
       setSpeaking(true);
@@ -88,30 +109,20 @@ export function VoiceBot() {
       audioRef.current?.pause();
       const audio = new Audio(url);
       audioRef.current = audio;
-      audio.onended = () => {
-        setSpeaking(false);
-        URL.revokeObjectURL(url);
-      };
-      await audio.play();
+      await new Promise<void>((resolve) => {
+        audio.onended = () => {
+          URL.revokeObjectURL(url);
+          resolve();
+        };
+        audio.onerror = () => resolve();
+        void audio.play().catch(() => resolve());
+      });
     } catch (error) {
       console.error(error);
+    } finally {
       setSpeaking(false);
     }
   }, []);
-
-  // Speak each step's prompt once, when it becomes active.
-  useEffect(() => {
-    if (!open) return;
-    if (spokenRef.current.has(step)) return;
-    spokenRef.current.add(step);
-    void speak(PROMPTS[step]);
-  }, [open, step, speak]);
-
-  useEffect(() => {
-    if (open) return;
-    audioRef.current?.pause();
-    setSpeaking(false);
-  }, [open]);
 
   const stopRecording = useCallback(() => {
     recorderRef.current?.stop();
@@ -164,13 +175,14 @@ export function VoiceBot() {
           toast.error("I could not hear that. Please try again.");
           return;
         }
-        if (step === "name" || step === "intro") {
+        const current = stepRef.current;
+        if (current === "name") {
           setForm((f) => ({ ...f, name: cleanName(text) }));
           setStep("mobile");
-        } else if (step === "mobile") {
+        } else if (current === "mobile") {
           setForm((f) => ({ ...f, mobile: cleanMobile(text) }));
           setStep("email");
-        } else if (step === "email") {
+        } else if (current === "email") {
           setForm((f) => ({ ...f, email: cleanEmail(text) }));
           setStep("review");
         }
@@ -190,7 +202,37 @@ export function VoiceBot() {
         setRecording(false);
       }
     }, 12000);
-  }, [step]);
+  }, []);
+
+  startRef.current = startRecording;
+
+  // Voice mode: speak the prompt, then open the mic automatically.
+  useEffect(() => {
+    if (!open || mode !== "voice") return;
+    const key = `${mode}:${step}`;
+    if (handledRef.current.has(key)) return;
+    handledRef.current.add(key);
+
+    let cancelled = false;
+    void (async () => {
+      await speak(PROMPTS[step]);
+      if (cancelled) return;
+      if (step === "name" || step === "mobile" || step === "email") {
+        await startRef.current();
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [open, mode, step, speak]);
+
+  useEffect(() => {
+    if (open) return;
+    audioRef.current?.pause();
+    setSpeaking(false);
+    if (recorderRef.current?.state === "recording") recorderRef.current.stop();
+    setRecording(false);
+  }, [open]);
 
   const joinCommunity = async () => {
     const parsed = leadSchema.safeParse(form);
@@ -203,7 +245,7 @@ export function VoiceBot() {
       name: parsed.data.name,
       mobile: parsed.data.mobile,
       email: parsed.data.email,
-      source: "voice_bot",
+      source: mode === "voice" ? "voice_bot" : "manual_bot",
       joined_whatsapp: true,
     });
     setSaving(false);
@@ -218,11 +260,20 @@ export function VoiceBot() {
   };
 
   const restart = () => {
-    spokenRef.current = new Set();
+    handledRef.current = new Set();
     setForm({ name: "", mobile: "", email: "" });
     setHeard(null);
-    setStep("intro");
+    setStep("name");
+    setMode("choose");
   };
+
+  const statusText = speaking
+    ? "Speaking…"
+    : recording
+      ? "Listening…"
+      : thinking
+        ? "Thinking…"
+        : "Ready";
 
   return (
     <>
@@ -230,7 +281,7 @@ export function VoiceBot() {
         <button
           onClick={() => setOpen(true)}
           className="fixed bottom-5 right-5 z-50 flex items-center gap-3 rounded-full bg-primary px-5 py-4 text-primary-foreground shadow-elegant transition-transform hover:scale-105"
-          aria-label="Talk to the Prime Pure voice assistant"
+          aria-label="Talk to the Prime Pure assistant"
         >
           <span className="relative flex size-6 items-center justify-center">
             <span className="absolute inset-0 rounded-full animate-pulse-ring" />
@@ -246,9 +297,9 @@ export function VoiceBot() {
             <div className="flex items-center gap-2">
               <Sparkles className="size-4 text-accent" />
               <div>
-                <p className="font-display text-base leading-none">Pure · Voice Assistant</p>
+                <p className="font-display text-base leading-none">Pure · Property Assistant</p>
                 <p className="text-[0.65rem] opacity-70">
-                  {speaking ? "Speaking…" : recording ? "Listening…" : thinking ? "Thinking…" : "Ready"}
+                  {mode === "choose" ? "Choose how you'd like to share details" : statusText}
                 </p>
               </div>
             </div>
@@ -257,88 +308,136 @@ export function VoiceBot() {
             </button>
           </div>
 
-          <div className="space-y-4 p-4">
-            <div className="flex gap-2 rounded-md bg-muted p-3 text-sm">
-              <Volume2 className="mt-0.5 size-4 shrink-0 text-accent" />
-              <p>{PROMPTS[step]}</p>
-            </div>
-
-            {heard && (
-              <p className="text-xs text-muted-foreground">
-                I heard: <span className="italic">“{heard}”</span>
+          {mode === "choose" ? (
+            <div className="space-y-4 p-4">
+              <p className="text-sm text-muted-foreground">
+                I can add you to our WhatsApp community for early access to new listings. How would you
+                like to share your name, mobile number and email?
               </p>
-            )}
-
-            {step !== "done" && (
-              <div className="flex items-center gap-2">
-                <Button
-                  onClick={recording ? stopRecording : startRecording}
-                  disabled={thinking}
-                  variant={recording ? "destructive" : "default"}
-                  className="flex-1"
-                >
-                  {thinking ? (
-                    <Loader2 className="size-4 animate-spin" />
-                  ) : recording ? (
-                    <Square className="size-4" />
-                  ) : (
-                    <Mic className="size-4" />
-                  )}
-                  {recording ? "Stop & send" : thinking ? "Processing" : "Speak answer"}
-                </Button>
-                <Button variant="outline" onClick={() => void speak(PROMPTS[step])} disabled={speaking}>
-                  <Volume2 className="size-4" />
-                </Button>
-              </div>
-            )}
-
-            <div className="space-y-3">
-              <div className="space-y-1">
-                <Label htmlFor="vb-name" className="text-xs">Full name</Label>
-                <Input
-                  id="vb-name"
-                  value={form.name}
-                  maxLength={80}
-                  placeholder="e.g. Rahul Sharma"
-                  onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                />
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="vb-mobile" className="text-xs">Mobile number</Label>
-                <Input
-                  id="vb-mobile"
-                  value={form.mobile}
-                  maxLength={20}
-                  inputMode="tel"
-                  placeholder="e.g. 9876543210"
-                  onChange={(e) => setForm((f) => ({ ...f, mobile: e.target.value }))}
-                />
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="vb-email" className="text-xs">Email</Label>
-                <Input
-                  id="vb-email"
-                  value={form.email}
-                  maxLength={160}
-                  inputMode="email"
-                  placeholder="e.g. rahul@email.com"
-                  onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-                />
-              </div>
+              <Button
+                className="h-auto w-full flex-col items-start gap-1 py-3 text-left"
+                onClick={() => {
+                  handledRef.current = new Set();
+                  setStep("name");
+                  setMode("voice");
+                }}
+              >
+                <span className="flex items-center gap-2 font-medium">
+                  <Mic className="size-4" /> Voice — I'll ask, you speak
+                </span>
+                <span className="text-xs font-normal opacity-80">
+                  The mic opens automatically after each question
+                </span>
+              </Button>
+              <Button
+                variant="outline"
+                className="h-auto w-full flex-col items-start gap-1 py-3 text-left"
+                onClick={() => {
+                  setStep("review");
+                  setMode("manual");
+                }}
+              >
+                <span className="flex items-center gap-2 font-medium">
+                  <Keyboard className="size-4" /> Manual — I'll type it myself
+                </span>
+                <span className="text-xs font-normal text-muted-foreground">
+                  Fill a short three-field form
+                </span>
+              </Button>
             </div>
+          ) : (
+            <div className="space-y-4 p-4">
+              <div className="flex gap-2 rounded-md bg-muted p-3 text-sm">
+                {mode === "voice" ? (
+                  <Volume2 className="mt-0.5 size-4 shrink-0 text-accent" />
+                ) : (
+                  <Keyboard className="mt-0.5 size-4 shrink-0 text-accent" />
+                )}
+                <p>{mode === "voice" ? PROMPTS[step] : LABELS[step]}</p>
+              </div>
 
-            <Button onClick={joinCommunity} disabled={saving} className="w-full">
-              {saving ? <Loader2 className="size-4 animate-spin" /> : <MessageCircle className="size-4" />}
-              Join WhatsApp community
-            </Button>
+              {mode === "voice" && heard && (
+                <p className="text-xs text-muted-foreground">
+                  I heard: <span className="italic">“{heard}”</span>
+                </p>
+              )}
 
-            <button
-              onClick={restart}
-              className={cn("w-full text-center text-xs text-muted-foreground hover:text-foreground")}
-            >
-              Start over
-            </button>
-          </div>
+              {mode === "voice" && step !== "done" && (
+                <div className="flex items-center gap-2">
+                  <Button
+                    onClick={recording ? stopRecording : () => void startRecording()}
+                    disabled={thinking}
+                    variant={recording ? "destructive" : "default"}
+                    className="flex-1"
+                  >
+                    {thinking ? (
+                      <Loader2 className="size-4 animate-spin" />
+                    ) : recording ? (
+                      <Square className="size-4" />
+                    ) : (
+                      <Mic className="size-4" />
+                    )}
+                    {recording ? "Stop & send" : thinking ? "Processing" : "Speak answer"}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => void speak(PROMPTS[step])}
+                    disabled={speaking}
+                    aria-label="Repeat the question"
+                  >
+                    <Volume2 className="size-4" />
+                  </Button>
+                </div>
+              )}
+
+              <div className="space-y-3">
+                <div className="space-y-1">
+                  <Label htmlFor="vb-name" className="text-xs">Full name</Label>
+                  <Input
+                    id="vb-name"
+                    value={form.name}
+                    maxLength={80}
+                    placeholder="e.g. Rahul Sharma"
+                    onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="vb-mobile" className="text-xs">Mobile number</Label>
+                  <Input
+                    id="vb-mobile"
+                    value={form.mobile}
+                    maxLength={20}
+                    inputMode="tel"
+                    placeholder="e.g. 98765 43210"
+                    onChange={(e) => setForm((f) => ({ ...f, mobile: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="vb-email" className="text-xs">Email</Label>
+                  <Input
+                    id="vb-email"
+                    value={form.email}
+                    maxLength={160}
+                    inputMode="email"
+                    placeholder="e.g. rahul@email.com"
+                    onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+                  />
+                </div>
+              </div>
+
+              <Button onClick={joinCommunity} disabled={saving} className="w-full">
+                {saving ? <Loader2 className="size-4 animate-spin" /> : <MessageCircle className="size-4" />}
+                Join WhatsApp community
+              </Button>
+
+              <button
+                onClick={restart}
+                className="w-full text-center text-xs text-muted-foreground hover:text-foreground"
+              >
+                Start over
+              </button>
+            </div>
+          )}
         </div>
       )}
     </>

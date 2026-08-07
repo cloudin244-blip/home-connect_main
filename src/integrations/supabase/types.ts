@@ -70,57 +70,128 @@ export type Database = {
       }
       properties: {
         Row: {
+          amenities: string[]
           area: string | null
           bathrooms: number
           bedrooms: number
+          city: string | null
           created_at: string
           description: string | null
           featured: boolean
+          gallery: Json
+          highlights: string[]
           id: string
           image_url: string | null
           location: string
+          map_query: string | null
+          possession: string | null
           price: string
+          price_value: number
           property_type: string
           published: boolean
+          rera_id: string | null
+          slug: string | null
           sort_order: number
           status: string
           title: string
         }
         Insert: {
+          amenities?: string[]
           area?: string | null
           bathrooms?: number
           bedrooms?: number
+          city?: string | null
           created_at?: string
           description?: string | null
           featured?: boolean
+          gallery?: Json
+          highlights?: string[]
           id?: string
           image_url?: string | null
           location: string
+          map_query?: string | null
+          possession?: string | null
           price: string
+          price_value?: number
           property_type?: string
           published?: boolean
+          rera_id?: string | null
+          slug?: string | null
           sort_order?: number
           status?: string
           title: string
         }
         Update: {
+          amenities?: string[]
           area?: string | null
           bathrooms?: number
           bedrooms?: number
+          city?: string | null
           created_at?: string
           description?: string | null
           featured?: boolean
+          gallery?: Json
+          highlights?: string[]
           id?: string
           image_url?: string | null
           location?: string
+          map_query?: string | null
+          possession?: string | null
           price?: string
+          price_value?: number
           property_type?: string
           published?: boolean
+          rera_id?: string | null
+          slug?: string | null
           sort_order?: number
           status?: string
           title?: string
         }
         Relationships: []
+      }
+      property_inquiries: {
+        Row: {
+          created_at: string
+          email: string
+          handled: boolean
+          id: string
+          message: string | null
+          mobile: string
+          name: string
+          property_id: string | null
+          property_title: string | null
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          handled?: boolean
+          id?: string
+          message?: string | null
+          mobile: string
+          name: string
+          property_id?: string | null
+          property_title?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          handled?: boolean
+          id?: string
+          message?: string | null
+          mobile?: string
+          name?: string
+          property_id?: string | null
+          property_title?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "property_inquiries_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       site_settings: {
         Row: {
