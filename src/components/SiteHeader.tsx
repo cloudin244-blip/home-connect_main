@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Menu, Phone, X, ShieldCheck } from "lucide-react";
 
 import logo from "@/assets/prime-pure-logo.asset.json";
-import { settingsQuery, WHATSAPP_FALLBACK } from "@/lib/site-data";
+import { CONTACT_FALLBACK, settingsQuery, telHref, WHATSAPP_FALLBACK } from "@/lib/site-data";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -42,7 +42,8 @@ export function SiteHeader() {
     return () => data.subscription.unsubscribe();
   }, []);
 
-  const phone = settings?.["phone"] ?? "+91 96606 19500";
+  const phone = settings?.["phone"] ?? CONTACT_FALLBACK.phone;
+  const phone2 = settings?.["phone_2"] ?? CONTACT_FALLBACK.phone2;
   const whatsapp = settings?.["whatsapp_community_url"] ?? WHATSAPP_FALLBACK;
 
   return (
@@ -51,8 +52,11 @@ export function SiteHeader() {
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 text-xs tracking-wide">
           <span className="opacity-80">RERA-compliant listings · Zero brokerage on select projects</span>
           <div className="flex items-center gap-5">
-            <a href={`tel:${phone.replace(/\s/g, "")}`} className="flex items-center gap-2 hover:text-accent">
+            <a href={telHref(phone)} className="flex items-center gap-2 hover:text-accent">
               <Phone className="size-3.5" /> {phone}
+            </a>
+            <a href={telHref(phone2)} className="hidden items-center gap-2 hover:text-accent lg:flex">
+              <Phone className="size-3.5" /> {phone2}
             </a>
             <a href={whatsapp} target="_blank" rel="noreferrer" className="hover:text-accent">
               WhatsApp Community
@@ -85,7 +89,7 @@ export function SiteHeader() {
         <div className="hidden items-center gap-2 lg:flex">
           <Button asChild variant="outline" size="sm">
             <Link to={signedIn ? "/admin" : "/auth"}>
-              <ShieldCheck className="size-4" /> {signedIn ? "Admin" : "Team login"}
+              <ShieldCheck className="size-4" /> {signedIn ? "Admin" : "Login"}
             </Link>
           </Button>
           <Button asChild size="sm">
@@ -118,7 +122,7 @@ export function SiteHeader() {
               </Link>
             ))}
             <Link to={signedIn ? "/admin" : "/auth"} onClick={() => setOpen(false)} className="py-3 text-sm">
-              {signedIn ? "Admin dashboard" : "Team login"}
+              {signedIn ? "Admin dashboard" : "Login"}
             </Link>
             <Button asChild className="mt-2">
               <a href={whatsapp} target="_blank" rel="noreferrer">
