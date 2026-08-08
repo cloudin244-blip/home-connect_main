@@ -1,9 +1,11 @@
 {
   "version": 1,
-  "asset_id": "a865aad0-507f-4c42-824e-0b7ec79b7602",
+  "asset_id": "999cb36b-799d-433e-8b41-8256c0b17475",
   "project_id": "21d5f68f-2831-473b-a5bb-c81077ea8b19",
-  "url": "/__l5e/assets-v1/a865aad0-507f-4c42-824e-0b7ec79b7602/agent-2.mp4",
+  "url": "/__l5e/assets-v1/999cb36b-799d-433e-8b41-8256c0b17475/agent-2.mp4",
+  "r2_key": "a/v1/21d5f68f-2831-473b-a5bb-c81077ea8b19/999cb36b-799d-433e-8b41-8256c0b17475/agent-2.mp4",
   "original_filename": "agent-2.mp4",
-  "size": 7144569,
-  "created_at": "2026-08-06T20:00:06Z"
+  "size": 7250742,
+  "content_type": "video/mp4",
+  "created_at": "2026-08-08T04:47:35Z"
 }
