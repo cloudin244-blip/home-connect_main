@@ -186,7 +186,10 @@ function Home() {
             <dl className="grid max-w-4xl grid-cols-2 gap-8 md:grid-cols-4">
               {STATS.map((stat) => (
                 <div key={stat.label}>
-                  <dt className="font-display text-4xl font-bold text-accent md:text-5xl">{stat.value}</dt>
+                  <dt className="font-display text-4xl font-bold tabular-nums tracking-tight text-accent md:text-5xl">
+                    {stat.value}
+                  </dt>
+
                   <dd className="mt-3 text-sm font-medium tracking-wide text-foreground">{stat.label}</dd>
                 </div>
               ))}
