@@ -16,11 +16,16 @@ import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { supabase } from "@/integrations/supabase/client";
 import { settingsQuery, WHATSAPP_FALLBACK } from "@/lib/site-data";
 
 type Mode = "choose" | "manual" | "voice";
-type Step = "name" | "mobile" | "email" | "review" | "done";
+type Step = "name" | "mobile" | "email" | "query" | "review" | "done";
+
+const GREETING =
+  "I am Prime Pure Real-estate Agent, please fill the form to join community.";
 
 const leadSchema = z.object({
   name: z.string().trim().min(2, "Please enter your full name").max(80),
@@ -29,12 +34,14 @@ const leadSchema = z.object({
     .trim()
     .regex(/^[+]?[0-9][0-9\s-]{7,17}$/, "Please enter a valid mobile number"),
   email: z.string().trim().email("Please enter a valid email address").max(160),
+  query: z.string().trim().max(500).optional(),
 });
 
 const PROMPTS: Record<Step, string> = {
-  name: "Namaste! I am Pure, the Prime Pure property assistant. Please say your full name after the beep.",
+  name: `${GREETING} Please say your full name after the beep.`,
   mobile: "Thank you. Now please say your mobile number, digit by digit.",
-  email: "Great. Finally, please say your email address.",
+  email: "Great. Now please say your email address.",
+  query: "Finally, tell me your query — what kind of property are you looking for?",
   review: "Here is what I noted. Please check it, then tap join to enter our WhatsApp community.",
   done: "Wonderful. You are all set — welcome to the Prime Pure community.",
 };
@@ -43,6 +50,7 @@ const LABELS: Record<Step, string> = {
   name: "What is your full name?",
   mobile: "What is your mobile number?",
   email: "What is your email address?",
+  query: "What is your query?",
   review: "Please review your details, then join our WhatsApp community.",
   done: "You are all set — welcome to the Prime Pure community.",
 };
@@ -74,15 +82,17 @@ function cleanName(raw: string) {
 export function VoiceBot() {
   const { data: settings } = useQuery(settingsQuery);
   const whatsapp = settings?.["whatsapp_community_url"] ?? WHATSAPP_FALLBACK;
+  const isMobile = useIsMobile();
 
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<Mode>("choose");
   const [step, setStep] = useState<Step>("name");
+  const [started, setStarted] = useState(false);
   const [speaking, setSpeaking] = useState(false);
   const [recording, setRecording] = useState(false);
   const [thinking, setThinking] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({ name: "", mobile: "", email: "" });
+  const [form, setForm] = useState({ name: "", mobile: "", email: "", query: "" });
   const [heard, setHeard] = useState<string | null>(null);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -91,8 +101,23 @@ export function VoiceBot() {
   const handledRef = useRef<Set<string>>(new Set());
   const stepRef = useRef<Step>("name");
   const startRef = useRef<() => Promise<void>>(async () => {});
+  const autoOpenedRef = useRef(false);
 
   stepRef.current = step;
+
+  // On mobile, surface the voice-based form automatically.
+  useEffect(() => {
+    if (!isMobile || autoOpenedRef.current) return;
+    autoOpenedRef.current = true;
+    const timer = window.setTimeout(() => {
+      setOpen(true);
+      setMode("voice");
+      setStep("name");
+      setStarted(false);
+      handledRef.current = new Set();
+    }, 1200);
+    return () => window.clearTimeout(timer);
+  }, [isMobile]);
 
   /** Speaks text and resolves once playback finishes (or fails). */
   const speak = useCallback(async (text: string) => {
@@ -184,6 +209,9 @@ export function VoiceBot() {
           setStep("email");
         } else if (current === "email") {
           setForm((f) => ({ ...f, email: cleanEmail(text) }));
+          setStep("query");
+        } else if (current === "query") {
+          setForm((f) => ({ ...f, query: text.slice(0, 500) }));
           setStep("review");
         }
       } catch (error) {
@@ -208,7 +236,7 @@ export function VoiceBot() {
 
   // Voice mode: speak the prompt, then open the mic automatically.
   useEffect(() => {
-    if (!open || mode !== "voice") return;
+    if (!open || mode !== "voice" || !started) return;
     const key = `${mode}:${step}`;
     if (handledRef.current.has(key)) return;
     handledRef.current.add(key);
@@ -217,14 +245,14 @@ export function VoiceBot() {
     void (async () => {
       await speak(PROMPTS[step]);
       if (cancelled) return;
-      if (step === "name" || step === "mobile" || step === "email") {
+      if (step === "name" || step === "mobile" || step === "email" || step === "query") {
         await startRef.current();
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [open, mode, step, speak]);
+  }, [open, mode, step, started, speak]);
 
   useEffect(() => {
     if (open) return;
@@ -245,6 +273,7 @@ export function VoiceBot() {
       name: parsed.data.name,
       mobile: parsed.data.mobile,
       email: parsed.data.email,
+      notes: parsed.data.query || null,
       source: mode === "voice" ? "voice_bot" : "manual_bot",
       joined_whatsapp: true,
     });
@@ -261,9 +290,10 @@ export function VoiceBot() {
 
   const restart = () => {
     handledRef.current = new Set();
-    setForm({ name: "", mobile: "", email: "" });
+    setForm({ name: "", mobile: "", email: "", query: "" });
     setHeard(null);
     setStep("name");
+    setStarted(false);
     setMode("choose");
   };
 
@@ -292,12 +322,12 @@ export function VoiceBot() {
       )}
 
       {open && (
-        <div className="fixed bottom-5 right-5 z-50 w-[min(94vw,23rem)] overflow-hidden rounded-lg border border-border bg-card shadow-elegant animate-rise-in">
+        <div className="fixed bottom-5 right-5 z-50 max-h-[86vh] w-[min(94vw,23rem)] overflow-y-auto rounded-lg border border-border bg-card shadow-elegant animate-rise-in">
           <div className="surface-navy flex items-center justify-between px-4 py-3">
             <div className="flex items-center gap-2">
               <Sparkles className="size-4 text-accent" />
               <div>
-                <p className="font-display text-base leading-none">Pure · Property Assistant</p>
+                <p className="font-display text-base leading-none">Prime Pure · Property Agent</p>
                 <p className="text-[0.65rem] opacity-70">
                   {mode === "choose" ? "Choose how you'd like to share details" : statusText}
                 </p>
@@ -310,15 +340,13 @@ export function VoiceBot() {
 
           {mode === "choose" ? (
             <div className="space-y-4 p-4">
-              <p className="text-sm text-muted-foreground">
-                I can add you to our WhatsApp community for early access to new listings. How would you
-                like to share your name, mobile number and email?
-              </p>
+              <p className="text-sm text-muted-foreground">{GREETING}</p>
               <Button
                 className="h-auto w-full flex-col items-start gap-1 py-3 text-left"
                 onClick={() => {
                   handledRef.current = new Set();
                   setStep("name");
+                  setStarted(true);
                   setMode("voice");
                 }}
               >
@@ -341,7 +369,7 @@ export function VoiceBot() {
                   <Keyboard className="size-4" /> Manual — I'll type it myself
                 </span>
                 <span className="text-xs font-normal text-muted-foreground">
-                  Fill a short three-field form
+                  Fill a short form: name, mobile, email and your query
                 </span>
               </Button>
             </div>
@@ -356,13 +384,19 @@ export function VoiceBot() {
                 <p>{mode === "voice" ? PROMPTS[step] : LABELS[step]}</p>
               </div>
 
+              {mode === "voice" && !started && (
+                <Button className="w-full" onClick={() => setStarted(true)}>
+                  <Mic className="size-4" /> Tap to start voice form
+                </Button>
+              )}
+
               {mode === "voice" && heard && (
                 <p className="text-xs text-muted-foreground">
                   I heard: <span className="italic">“{heard}”</span>
                 </p>
               )}
 
-              {mode === "voice" && step !== "done" && (
+              {mode === "voice" && started && step !== "done" && (
                 <div className="flex items-center gap-2">
                   <Button
                     onClick={recording ? stopRecording : () => void startRecording()}
@@ -408,6 +442,7 @@ export function VoiceBot() {
                     value={form.mobile}
                     maxLength={20}
                     inputMode="tel"
+                    className="tabular-nums"
                     placeholder="e.g. 98765 43210"
                     onChange={(e) => setForm((f) => ({ ...f, mobile: e.target.value }))}
                   />
@@ -421,6 +456,17 @@ export function VoiceBot() {
                     inputMode="email"
                     placeholder="e.g. rahul@email.com"
                     onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="vb-query" className="text-xs">Your query</Label>
+                  <Textarea
+                    id="vb-query"
+                    value={form.query}
+                    maxLength={500}
+                    rows={3}
+                    placeholder="e.g. Looking for a 3BHK in Electronic City under ₹1.2 Cr"
+                    onChange={(e) => setForm((f) => ({ ...f, query: e.target.value }))}
                   />
                 </div>
               </div>
