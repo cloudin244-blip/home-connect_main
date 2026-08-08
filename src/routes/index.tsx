@@ -104,10 +104,10 @@ function Home() {
       <SiteHeader />
 
       <main>
-        {/* HERO with building creation video */}
+        {/* HERO — building creation video */}
         <section className="relative isolate overflow-hidden">
           <video
-            className="absolute inset-0 size-full object-cover"
+            className="h-[52vh] w-full object-cover md:h-[76vh]"
             src={cmsHero?.video_url ?? heroVideo.url}
             autoPlay
             muted
@@ -115,8 +115,12 @@ function Home() {
             playsInline
             preload="auto"
           />
-          <div className="absolute inset-0 bg-navy-deep/72" />
-          <div className="relative mx-auto flex min-h-[86vh] max-w-7xl flex-col justify-center px-6 py-24 text-primary-foreground">
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-navy-deep/40 via-transparent to-navy-deep/70" />
+        </section>
+
+        {/* HERO COPY — below the video */}
+        <section className="surface-navy">
+          <div className="mx-auto max-w-7xl px-6 py-16 text-primary-foreground md:py-20">
             <p className="text-eyebrow text-accent">Prime Pure Real Estate</p>
             <h1 className="mt-5 max-w-3xl font-display text-5xl leading-[1.05] md:text-7xl">
               <span className="text-gold-gradient">{heroTitle}</span>
@@ -136,6 +140,7 @@ function Home() {
             </div>
           </div>
         </section>
+
 
         {/* AGENT VIDEOS — center of the page */}
         <section id="videos" className="mx-auto max-w-7xl px-6 py-24">
