@@ -1,0 +1,1 @@
+UPDATE site_settings SET value = '+91 93549 92890' WHERE key = 'phone';
