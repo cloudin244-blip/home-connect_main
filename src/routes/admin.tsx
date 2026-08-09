@@ -13,7 +13,8 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
-import { leadsQuery, propertiesQuery, settingsQuery, videosQuery } from "@/lib/site-data";
+import { LeadsDashboard } from "@/components/admin/LeadsDashboard";
+import { propertiesQuery, settingsQuery, videosQuery } from "@/lib/site-data";
 
 export const Route = createFileRoute("/admin")({
   ssr: false,
