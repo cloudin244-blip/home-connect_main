@@ -81,7 +81,6 @@ function AdminPage() {
 
   const { data: properties } = useQuery({ ...propertiesQuery, enabled: !!role });
   const { data: videos } = useQuery({ ...videosQuery, enabled: !!role });
-  const { data: leads } = useQuery({ ...leadsQuery, enabled: !!role });
   const { data: settings } = useQuery({ ...settingsQuery, enabled: !!role });
 
   if (checking) {
