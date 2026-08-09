@@ -144,7 +144,7 @@ function AdminPage() {
       <main className="mx-auto max-w-7xl px-6 py-10">
         <Tabs defaultValue="leads">
           <TabsList>
-            <TabsTrigger value="leads">Leads ({leads?.length ?? 0})</TabsTrigger>
+            <TabsTrigger value="leads">Leads</TabsTrigger>
             <TabsTrigger value="properties">Properties</TabsTrigger>
             <TabsTrigger value="videos">Videos</TabsTrigger>
             <TabsTrigger value="settings">Settings</TabsTrigger>
