@@ -107,7 +107,7 @@ function Home() {
         {/* HERO — building creation video */}
         <section className="relative isolate overflow-hidden">
           <video
-            className="h-[52vh] w-full object-cover md:h-[76vh]"
+            className="h-[64vh] w-full object-cover md:h-[88vh]"
             src={cmsHero?.video_url ?? heroVideo.url}
             autoPlay
             muted

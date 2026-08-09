@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
+  CheckCircle2,
   Keyboard,
   Loader2,
   Mic,
+  MicOff,
   MessageCircle,
+  Play,
   Square,
   Volume2,
   X,
@@ -23,18 +26,32 @@ import { settingsQuery, WHATSAPP_FALLBACK } from "@/lib/site-data";
 
 type Mode = "choose" | "manual" | "voice";
 type Step = "name" | "mobile" | "email" | "query" | "review" | "done";
+type MicState = "unknown" | "prompt" | "granted" | "denied";
+type Field = "name" | "mobile" | "email" | "query";
 
 const GREETING =
   "I am Prime Pure Real-estate Agent, please fill the form to join community.";
 
 const leadSchema = z.object({
-  name: z.string().trim().min(2, "Please enter your full name").max(80),
+  name: z
+    .string()
+    .trim()
+    .min(2, "Please enter your full name (at least 2 characters).")
+    .max(80, "Name is too long — keep it under 80 characters.")
+    .regex(/^[A-Za-z][A-Za-z .'-]*$/, "Name can only contain letters, spaces and . ' -"),
   mobile: z
     .string()
     .trim()
-    .regex(/^[+]?[0-9][0-9\s-]{7,17}$/, "Please enter a valid mobile number"),
-  email: z.string().trim().email("Please enter a valid email address").max(160),
-  query: z.string().trim().max(500).optional(),
+    .regex(
+      /^[+]?[0-9][0-9\s-]{7,17}$/,
+      "Enter a valid mobile number, e.g. 98765 43210 or +91 98765 43210.",
+    ),
+  email: z
+    .string()
+    .trim()
+    .email("Enter a valid email address, e.g. rahul@email.com.")
+    .max(160, "Email is too long."),
+  query: z.string().trim().max(500, "Please keep your query under 500 characters.").optional(),
 });
 
 const PROMPTS: Record<Step, string> = {
@@ -93,7 +110,11 @@ export function VoiceBot() {
   const [thinking, setThinking] = useState(false);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({ name: "", mobile: "", email: "", query: "" });
+  const [errors, setErrors] = useState<Partial<Record<Field, string>>>({});
   const [heard, setHeard] = useState<string | null>(null);
+  const [micState, setMicState] = useState<MicState>("unknown");
+  const [audioBlocked, setAudioBlocked] = useState(false);
+  const [voiceError, setVoiceError] = useState<string | null>(null);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
@@ -102,10 +123,11 @@ export function VoiceBot() {
   const stepRef = useRef<Step>("name");
   const startRef = useRef<() => Promise<void>>(async () => {});
   const autoOpenedRef = useRef(false);
+  const lastSpokenRef = useRef<string>("");
 
   stepRef.current = step;
 
-  // On mobile, surface the voice-based form automatically.
+  // On mobile, surface the voice-based form automatically (consent still asked).
   useEffect(() => {
     if (!isMobile || autoOpenedRef.current) return;
     autoOpenedRef.current = true;
@@ -119,8 +141,32 @@ export function VoiceBot() {
     return () => window.clearTimeout(timer);
   }, [isMobile]);
 
+  // Read any previously granted/denied mic permission so we can skip or explain.
+  useEffect(() => {
+    if (!open || typeof navigator === "undefined" || !navigator.permissions?.query) return;
+    let active = true;
+    void navigator.permissions
+      .query({ name: "microphone" as PermissionName })
+      .then((status) => {
+        if (!active) return;
+        const apply = () =>
+          setMicState(
+            status.state === "granted" ? "granted" : status.state === "denied" ? "denied" : "prompt",
+          );
+        apply();
+        status.onchange = apply;
+      })
+      .catch(() => {
+        /* permission API unsupported — fall back to prompting on use */
+      });
+    return () => {
+      active = false;
+    };
+  }, [open]);
+
   /** Speaks text and resolves once playback finishes (or fails). */
   const speak = useCallback(async (text: string) => {
+    lastSpokenRef.current = text;
     try {
       setSpeaking(true);
       const res = await fetch("/api/voice/speak", {
@@ -137,13 +183,25 @@ export function VoiceBot() {
       await new Promise<void>((resolve) => {
         audio.onended = () => {
           URL.revokeObjectURL(url);
+          setAudioBlocked(false);
           resolve();
         };
-        audio.onerror = () => resolve();
-        void audio.play().catch(() => resolve());
+        audio.onerror = () => {
+          setAudioBlocked(true);
+          resolve();
+        };
+        void audio
+          .play()
+          .then(() => setAudioBlocked(false))
+          .catch(() => {
+            // Browser blocked autoplay — offer a tap-to-play retry.
+            setAudioBlocked(true);
+            resolve();
+          });
       });
     } catch (error) {
       console.error(error);
+      setAudioBlocked(true);
     } finally {
       setSpeaking(false);
     }
@@ -158,12 +216,26 @@ export function VoiceBot() {
     audioRef.current?.pause();
     setSpeaking(false);
     setHeard(null);
+    setVoiceError(null);
 
     let stream: MediaStream;
     try {
       stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    } catch {
-      toast.error("Microphone access is needed. You can also type your answer below.");
+      setMicState("granted");
+    } catch (error) {
+      const name = (error as DOMException | undefined)?.name ?? "";
+      if (name === "NotAllowedError" || name === "SecurityError") {
+        setMicState("denied");
+        setVoiceError(
+          "Microphone access was blocked. Allow the mic in your browser settings, or just type your answers below — both work.",
+        );
+      } else if (name === "NotFoundError" || name === "NotReadableError") {
+        setVoiceError(
+          "We could not reach a microphone on this device. Please type your answers below instead.",
+        );
+      } else {
+        setVoiceError("The microphone could not start. Please retry, or type your answers below.");
+      }
       return;
     }
 
@@ -184,7 +256,7 @@ export function VoiceBot() {
       stream.getTracks().forEach((track) => track.stop());
       const blob = new Blob(chunksRef.current, { type: recorder.mimeType || "audio/webm" });
       if (blob.size < 1500) {
-        toast.error("That recording was empty — please try again.");
+        setVoiceError("That recording came through empty — tap “Speak answer” and try again.");
         return;
       }
       setThinking(true);
@@ -197,7 +269,7 @@ export function VoiceBot() {
         const text = (data.text ?? "").trim();
         setHeard(text || null);
         if (!text) {
-          toast.error("I could not hear that. Please try again.");
+          setVoiceError("I could not catch that. Please retry a little closer to the mic.");
           return;
         }
         const current = stepRef.current;
@@ -216,7 +288,7 @@ export function VoiceBot() {
         }
       } catch (error) {
         console.error(error);
-        toast.error("Voice service is busy. Please type your answer instead.");
+        setVoiceError("The voice service is busy right now. Please type your answer instead.");
       } finally {
         setThinking(false);
       }
@@ -237,6 +309,7 @@ export function VoiceBot() {
   // Voice mode: speak the prompt, then open the mic automatically.
   useEffect(() => {
     if (!open || mode !== "voice" || !started) return;
+    if (micState === "denied") return;
     const key = `${mode}:${step}`;
     if (handledRef.current.has(key)) return;
     handledRef.current.add(key);
@@ -252,7 +325,7 @@ export function VoiceBot() {
     return () => {
       cancelled = true;
     };
-  }, [open, mode, step, started, speak]);
+  }, [open, mode, step, started, speak, micState]);
 
   useEffect(() => {
     if (open) return;
@@ -262,10 +335,51 @@ export function VoiceBot() {
     setRecording(false);
   }, [open]);
 
+  /** Requests mic consent up front so the auto-open flow never surprises the user. */
+  const beginVoice = async () => {
+    setVoiceError(null);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream.getTracks().forEach((t) => t.stop());
+      setMicState("granted");
+    } catch (error) {
+      const name = (error as DOMException | undefined)?.name ?? "";
+      setMicState(name === "NotAllowedError" ? "denied" : "prompt");
+      setVoiceError(
+        name === "NotAllowedError"
+          ? "No problem — the mic stays off. You can type your answers below, or allow the mic from your browser's address bar and retry."
+          : "The microphone is unavailable. You can type your answers below instead.",
+      );
+      if (name === "NotAllowedError") return;
+    }
+    handledRef.current = new Set();
+    setStep("name");
+    setStarted(true);
+  };
+
+  const validateField = (field: Field, value: string) => {
+    const result = leadSchema.shape[field].safeParse(value);
+    setErrors((prev) => ({
+      ...prev,
+      [field]: result.success ? undefined : result.error.issues[0]?.message,
+    }));
+  };
+
+  const update = (field: Field, value: string) => {
+    setForm((f) => ({ ...f, [field]: value }));
+    if (errors[field]) validateField(field, value);
+  };
+
   const joinCommunity = async () => {
     const parsed = leadSchema.safeParse(form);
     if (!parsed.success) {
-      toast.error(parsed.error.issues[0]?.message ?? "Please check your details");
+      const next: Partial<Record<Field, string>> = {};
+      for (const issue of parsed.error.issues) {
+        const key = issue.path[0] as Field;
+        if (!next[key]) next[key] = issue.message;
+      }
+      setErrors(next);
+      toast.error(parsed.error.issues[0]?.message ?? "Please check the highlighted fields.");
       return;
     }
     setSaving(true);
@@ -280,9 +394,10 @@ export function VoiceBot() {
     setSaving(false);
     if (error) {
       console.error(error);
-      toast.error("Could not save your details. Please try again.");
+      toast.error("Could not save your details. Please check your connection and try again.");
       return;
     }
+    setErrors({});
     setStep("done");
     toast.success("Details saved — opening the WhatsApp community");
     window.open(whatsapp, "_blank", "noopener,noreferrer");
@@ -291,7 +406,9 @@ export function VoiceBot() {
   const restart = () => {
     handledRef.current = new Set();
     setForm({ name: "", mobile: "", email: "", query: "" });
+    setErrors({});
     setHeard(null);
+    setVoiceError(null);
     setStep("name");
     setStarted(false);
     setMode("choose");
@@ -303,7 +420,9 @@ export function VoiceBot() {
       ? "Listening…"
       : thinking
         ? "Thinking…"
-        : "Ready";
+        : micState === "denied"
+          ? "Mic off — typing works too"
+          : "Ready";
 
   return (
     <>
@@ -344,17 +463,15 @@ export function VoiceBot() {
               <Button
                 className="h-auto w-full flex-col items-start gap-1 py-3 text-left"
                 onClick={() => {
-                  handledRef.current = new Set();
-                  setStep("name");
-                  setStarted(true);
                   setMode("voice");
+                  void beginVoice();
                 }}
               >
                 <span className="flex items-center gap-2 font-medium">
                   <Mic className="size-4" /> Voice — I'll ask, you speak
                 </span>
                 <span className="text-xs font-normal opacity-80">
-                  The mic opens automatically after each question
+                  We'll ask for mic permission, then the mic opens after each question
                 </span>
               </Button>
               <Button
@@ -373,6 +490,26 @@ export function VoiceBot() {
                 </span>
               </Button>
             </div>
+          ) : step === "done" ? (
+            <div className="space-y-4 p-6 text-center">
+              <CheckCircle2 className="mx-auto size-9 text-accent" />
+              <h3 className="font-display text-xl">You're in — details saved</h3>
+              <p className="text-sm text-muted-foreground">
+                Welcome to the Prime Pure community. If the WhatsApp tab did not open, use the button
+                below.
+              </p>
+              <Button asChild className="w-full">
+                <a href={whatsapp} target="_blank" rel="noreferrer">
+                  <MessageCircle className="size-4" /> Open WhatsApp community
+                </a>
+              </Button>
+              <button
+                onClick={restart}
+                className="w-full text-center text-xs text-muted-foreground hover:text-foreground"
+              >
+                Submit another enquiry
+              </button>
+            </div>
           ) : (
             <div className="space-y-4 p-4">
               <div className="flex gap-2 rounded-md bg-muted p-3 text-sm">
@@ -385,8 +522,30 @@ export function VoiceBot() {
               </div>
 
               {mode === "voice" && !started && (
-                <Button className="w-full" onClick={() => setStarted(true)}>
-                  <Mic className="size-4" /> Tap to start voice form
+                <Button className="w-full" onClick={() => void beginVoice()}>
+                  <Mic className="size-4" /> Allow mic & start voice form
+                </Button>
+              )}
+
+              {mode === "voice" && voiceError && (
+                <div className="flex gap-2 rounded-md border border-destructive/40 bg-destructive/10 p-3 text-xs">
+                  <MicOff className="mt-0.5 size-4 shrink-0 text-destructive" />
+                  <div className="space-y-2">
+                    <p>{voiceError}</p>
+                    <Button size="sm" variant="outline" onClick={() => void startRecording()}>
+                      Retry microphone
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {mode === "voice" && audioBlocked && (
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => void speak(lastSpokenRef.current || PROMPTS[step])}
+                >
+                  <Play className="size-4" /> Tap to hear the question
                 </Button>
               )}
 
@@ -396,7 +555,7 @@ export function VoiceBot() {
                 </p>
               )}
 
-              {mode === "voice" && started && step !== "done" && (
+              {mode === "voice" && started && micState !== "denied" && (
                 <div className="flex items-center gap-2">
                   <Button
                     onClick={recording ? stopRecording : () => void startRecording()}
@@ -432,8 +591,11 @@ export function VoiceBot() {
                     value={form.name}
                     maxLength={80}
                     placeholder="e.g. Rahul Sharma"
-                    onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                    aria-invalid={!!errors.name}
+                    onBlur={(e) => validateField("name", e.target.value)}
+                    onChange={(e) => update("name", e.target.value)}
                   />
+                  {errors.name && <p className="text-xs text-destructive">{errors.name}</p>}
                 </div>
                 <div className="space-y-1">
                   <Label htmlFor="vb-mobile" className="text-xs">Mobile number</Label>
@@ -444,8 +606,11 @@ export function VoiceBot() {
                     inputMode="tel"
                     className="tabular-nums"
                     placeholder="e.g. 98765 43210"
-                    onChange={(e) => setForm((f) => ({ ...f, mobile: e.target.value }))}
+                    aria-invalid={!!errors.mobile}
+                    onBlur={(e) => validateField("mobile", e.target.value)}
+                    onChange={(e) => update("mobile", e.target.value)}
                   />
+                  {errors.mobile && <p className="text-xs text-destructive">{errors.mobile}</p>}
                 </div>
                 <div className="space-y-1">
                   <Label htmlFor="vb-email" className="text-xs">Email</Label>
@@ -455,8 +620,11 @@ export function VoiceBot() {
                     maxLength={160}
                     inputMode="email"
                     placeholder="e.g. rahul@email.com"
-                    onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+                    aria-invalid={!!errors.email}
+                    onBlur={(e) => validateField("email", e.target.value)}
+                    onChange={(e) => update("email", e.target.value)}
                   />
+                  {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
                 </div>
                 <div className="space-y-1">
                   <Label htmlFor="vb-query" className="text-xs">Your query</Label>
@@ -466,8 +634,10 @@ export function VoiceBot() {
                     maxLength={500}
                     rows={3}
                     placeholder="e.g. Looking for a 3BHK in Electronic City under ₹1.2 Cr"
-                    onChange={(e) => setForm((f) => ({ ...f, query: e.target.value }))}
+                    aria-invalid={!!errors.query}
+                    onChange={(e) => update("query", e.target.value)}
                   />
+                  {errors.query && <p className="text-xs text-destructive">{errors.query}</p>}
                 </div>
               </div>
 

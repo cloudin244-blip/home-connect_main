@@ -13,7 +13,8 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
-import { leadsQuery, propertiesQuery, settingsQuery, videosQuery } from "@/lib/site-data";
+import { LeadsDashboard } from "@/components/admin/LeadsDashboard";
+import { propertiesQuery, settingsQuery, videosQuery } from "@/lib/site-data";
 
 export const Route = createFileRoute("/admin")({
   ssr: false,
@@ -80,7 +81,6 @@ function AdminPage() {
 
   const { data: properties } = useQuery({ ...propertiesQuery, enabled: !!role });
   const { data: videos } = useQuery({ ...videosQuery, enabled: !!role });
-  const { data: leads } = useQuery({ ...leadsQuery, enabled: !!role });
   const { data: settings } = useQuery({ ...settingsQuery, enabled: !!role });
 
   if (checking) {
@@ -144,7 +144,7 @@ function AdminPage() {
       <main className="mx-auto max-w-7xl px-6 py-10">
         <Tabs defaultValue="leads">
           <TabsList>
-            <TabsTrigger value="leads">Leads ({leads?.length ?? 0})</TabsTrigger>
+            <TabsTrigger value="leads">Leads</TabsTrigger>
             <TabsTrigger value="properties">Properties</TabsTrigger>
             <TabsTrigger value="videos">Videos</TabsTrigger>
             <TabsTrigger value="settings">Settings</TabsTrigger>
@@ -153,42 +153,9 @@ function AdminPage() {
 
           {/* LEADS */}
           <TabsContent value="leads" className="mt-6">
-            <div className="overflow-x-auto rounded-lg border border-border bg-card">
-              <table className="w-full text-sm">
-                <thead className="bg-secondary text-left text-xs uppercase tracking-wide text-muted-foreground">
-                  <tr>
-                    <th className="p-3">Name</th>
-                    <th className="p-3">Mobile</th>
-                    <th className="p-3">Email</th>
-                    <th className="p-3">Source</th>
-                    <th className="p-3">WhatsApp</th>
-                    <th className="p-3">Captured</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(leads ?? []).map((lead) => (
-                    <tr key={lead.id} className="border-t border-border">
-                      <td className="p-3 font-medium">{lead.name}</td>
-                      <td className="p-3">{lead.mobile}</td>
-                      <td className="p-3">{lead.email}</td>
-                      <td className="p-3 text-muted-foreground">{lead.source}</td>
-                      <td className="p-3">{lead.joined_whatsapp ? "Joined" : "—"}</td>
-                      <td className="p-3 text-muted-foreground">
-                        {new Date(lead.created_at).toLocaleString()}
-                      </td>
-                    </tr>
-                  ))}
-                  {(leads ?? []).length === 0 && (
-                    <tr>
-                      <td colSpan={6} className="p-6 text-center text-muted-foreground">
-                        No leads captured yet.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
+            <LeadsDashboard />
           </TabsContent>
+
 
           {/* PROPERTIES */}
           <TabsContent value="properties" className="mt-6 space-y-6">
