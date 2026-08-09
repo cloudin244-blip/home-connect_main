@@ -153,42 +153,9 @@ function AdminPage() {
 
           {/* LEADS */}
           <TabsContent value="leads" className="mt-6">
-            <div className="overflow-x-auto rounded-lg border border-border bg-card">
-              <table className="w-full text-sm">
-                <thead className="bg-secondary text-left text-xs uppercase tracking-wide text-muted-foreground">
-                  <tr>
-                    <th className="p-3">Name</th>
-                    <th className="p-3">Mobile</th>
-                    <th className="p-3">Email</th>
-                    <th className="p-3">Source</th>
-                    <th className="p-3">WhatsApp</th>
-                    <th className="p-3">Captured</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(leads ?? []).map((lead) => (
-                    <tr key={lead.id} className="border-t border-border">
-                      <td className="p-3 font-medium">{lead.name}</td>
-                      <td className="p-3">{lead.mobile}</td>
-                      <td className="p-3">{lead.email}</td>
-                      <td className="p-3 text-muted-foreground">{lead.source}</td>
-                      <td className="p-3">{lead.joined_whatsapp ? "Joined" : "—"}</td>
-                      <td className="p-3 text-muted-foreground">
-                        {new Date(lead.created_at).toLocaleString()}
-                      </td>
-                    </tr>
-                  ))}
-                  {(leads ?? []).length === 0 && (
-                    <tr>
-                      <td colSpan={6} className="p-6 text-center text-muted-foreground">
-                        No leads captured yet.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
+            <LeadsDashboard />
           </TabsContent>
+
 
           {/* PROPERTIES */}
           <TabsContent value="properties" className="mt-6 space-y-6">
