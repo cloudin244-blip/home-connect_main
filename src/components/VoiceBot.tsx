@@ -21,8 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { supabase } from "@/integrations/supabase/client";
-import { settingsQuery, WHATSAPP_FALLBACK } from "@/lib/site-data";
+import { settingsQuery, WHATSAPP_FALLBACK, createLeadFn } from "@/lib/site-data";
 
 type Mode = "choose" | "manual" | "voice";
 type Step = "name" | "mobile" | "email" | "query" | "review" | "done";
@@ -383,17 +382,21 @@ export function VoiceBot() {
       return;
     }
     setSaving(true);
-    const { error } = await supabase.from("leads").insert({
-      name: parsed.data.name,
-      mobile: parsed.data.mobile,
-      email: parsed.data.email,
-      notes: parsed.data.query || null,
-      source: mode === "voice" ? "voice_bot" : "manual_bot",
-      joined_whatsapp: true,
-    });
-    setSaving(false);
-    if (error) {
-      console.error(error);
+    try {
+      await createLeadFn({
+        data: {
+          name: parsed.data.name,
+          mobile: parsed.data.mobile,
+          email: parsed.data.email,
+          notes: parsed.data.query || null,
+          source: mode === "voice" ? "voice_bot" : "manual_bot",
+          joined_whatsapp: true,
+        }
+      });
+      setSaving(false);
+    } catch (err) {
+      console.error(err);
+      setSaving(false);
       toast.error("Could not save your details. Please check your connection and try again.");
       return;
     }

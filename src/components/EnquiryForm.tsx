@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { supabase } from "@/integrations/supabase/client";
+import { createInquiryFn } from "@/lib/site-data";
 
 const schema = z.object({
   name: z
@@ -72,17 +72,21 @@ export function EnquiryForm({ propertyId, propertyTitle, compact }: Props) {
       return;
     }
     setSaving(true);
-    const { error } = await supabase.from("property_inquiries").insert({
-      property_id: propertyId ?? null,
-      property_title: propertyTitle ?? null,
-      name: parsed.data.name,
-      mobile: parsed.data.mobile,
-      email: parsed.data.email,
-      message: parsed.data.message ?? null,
-    });
-    setSaving(false);
-    if (error) {
-      console.error(error);
+    try {
+      await createInquiryFn({
+        data: {
+          property_id: propertyId ?? null,
+          property_title: propertyTitle ?? null,
+          name: parsed.data.name,
+          mobile: parsed.data.mobile,
+          email: parsed.data.email,
+          message: parsed.data.message ?? null,
+        }
+      });
+      setSaving(false);
+    } catch (err) {
+      console.error(err);
+      setSaving(false);
       toast.error("Could not send your enquiry. Please check your connection and try again.");
       return;
     }

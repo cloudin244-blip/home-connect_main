@@ -9,7 +9,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable/index";
 
 const schema = z.object({
   email: z.string().trim().email("Enter a valid email").max(160),
@@ -19,13 +18,13 @@ const schema = z.object({
 export const Route = createFileRoute("/auth")({
   head: () => ({
     meta: [
-      { title: "Team login | Prime Pure Real Estate" },
+      { title: "Login | Prime Pure Real Estate" },
       {
         name: "description",
         content: "Sign in to the Prime Pure Real Estate admin console to manage listings, videos and leads.",
       },
-      { property: "og:title", content: "Team login | Prime Pure Real Estate" },
-      { property: "og:description", content: "Admin console access for the Prime Pure team." },
+      { property: "og:title", content: "Login | Prime Pure Real Estate" },
+      { property: "og:description", content: "Admin console access for Prime Pure." },
     ],
   }),
   component: AuthPage,
@@ -76,15 +75,18 @@ function AuthPage() {
   };
 
   const google = async () => {
-    const result = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin,
+    setBusy(true);
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: `${window.location.origin}/admin`,
+      },
     });
-    if (result.error) {
+    setBusy(false);
+    if (error) {
       toast.error("Google sign-in failed. Please try again.");
       return;
     }
-    if (result.redirected) return;
-    navigate({ to: "/admin" });
   };
 
   return (
@@ -92,11 +94,8 @@ function AuthPage() {
       <div className="w-full max-w-md rounded-lg border border-border bg-card p-8 shadow-card">
         <img src={logo.url} alt="Prime Pure Real Estate logo" className="h-14 w-14 rounded-sm object-cover" />
         <h1 className="mt-6 font-display text-3xl">
-          {mode === "signin" ? "Team login" : "Create team account"}
+          {mode === "signin" ? "Login" : "Create account"}
         </h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Admin access is granted by the super admin. Sign in to manage listings, videos and leads.
-        </p>
 
         <form onSubmit={submit} className="mt-7 space-y-4">
           <div className="space-y-2">

@@ -14,7 +14,18 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { LeadsDashboard } from "@/components/admin/LeadsDashboard";
-import { propertiesQuery, settingsQuery, videosQuery } from "@/lib/site-data";
+import {
+  propertiesQuery,
+  settingsQuery,
+  videosQuery,
+  getUserRoleFn,
+  deletePropertyFn,
+  updatePropertyPublishStatusFn,
+  updateVideoPublishStatusFn,
+  saveSettingFn,
+  createPropertyFn,
+  addAdminFn,
+} from "@/lib/site-data";
 
 export const Route = createFileRoute("/admin")({
   ssr: false,
@@ -65,13 +76,9 @@ function AdminPage() {
         return;
       }
       setEmail(data.user.email ?? "");
-      const { data: roles } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", data.user.id);
+      const result = await getUserRoleFn();
       if (!active) return;
-      const list = (roles ?? []).map((r) => r.role);
-      setRole(list.includes("super_admin") ? "super_admin" : list.includes("admin") ? "admin" : null);
+      setRole(result.role);
       setChecking(false);
     })();
     return () => {
@@ -175,10 +182,13 @@ function AdminPage() {
                       variant="outline"
                       aria-label="Delete listing"
                       onClick={async () => {
-                        const { error } = await supabase.from("properties").delete().eq("id", property.id);
-                        if (error) { toast.error(error.message); return; }
-                        toast.success("Listing removed");
-                        qc.invalidateQueries({ queryKey: ["properties"] });
+                        try {
+                          await deletePropertyFn({ data: property.id });
+                          toast.success("Listing removed");
+                          qc.invalidateQueries({ queryKey: ["properties"] });
+                        } catch (err: any) {
+                          toast.error(err.message ?? "Could not remove listing");
+                        }
                       }}
                     >
                       <Trash2 className="size-4" />
@@ -188,12 +198,12 @@ function AdminPage() {
                     <Switch
                       checked={property.published}
                       onCheckedChange={async (checked) => {
-                        const { error } = await supabase
-                          .from("properties")
-                          .update({ published: checked })
-                          .eq("id", property.id);
-                        if (error) { toast.error(error.message); return; }
-                        qc.invalidateQueries({ queryKey: ["properties"] });
+                        try {
+                          await updatePropertyPublishStatusFn({ data: { id: property.id, published: checked } });
+                          qc.invalidateQueries({ queryKey: ["properties"] });
+                        } catch (err: any) {
+                          toast.error(err.message ?? "Could not update status");
+                        }
                       }}
                     />
                     <span className="text-xs text-muted-foreground">
@@ -219,12 +229,12 @@ function AdminPage() {
                   <Switch
                     checked={video.published}
                     onCheckedChange={async (checked) => {
-                      const { error } = await supabase
-                        .from("site_videos")
-                        .update({ published: checked })
-                        .eq("id", video.id);
-                      if (error) { toast.error(error.message); return; }
-                      qc.invalidateQueries({ queryKey: ["site_videos"] });
+                      try {
+                        await updateVideoPublishStatusFn({ data: { id: video.id, published: checked } });
+                        qc.invalidateQueries({ queryKey: ["site_videos"] });
+                      } catch (err: any) {
+                        toast.error(err.message ?? "Could not update status");
+                      }
                     }}
                   />
                   <span className="text-xs text-muted-foreground">
@@ -284,14 +294,15 @@ function SettingField({ settingKey, value }: { settingKey: string; value: string
         disabled={saving || draft === value}
         onClick={async () => {
           setSaving(true);
-          const { error } = await supabase
-            .from("site_settings")
-            .update({ value: draft })
-            .eq("key", settingKey);
-          setSaving(false);
-          if (error) { toast.error(error.message); return; }
-          toast.success("Saved");
-          qc.invalidateQueries({ queryKey: ["site_settings"] });
+          try {
+            await saveSettingFn({ data: { key: settingKey, value: draft } });
+            setSaving(false);
+            toast.success("Saved");
+            qc.invalidateQueries({ queryKey: ["site_settings"] });
+          } catch (err: any) {
+            setSaving(false);
+            toast.error(err.message ?? "Could not save setting");
+          }
         }}
       >
         Save
@@ -350,19 +361,24 @@ function NewPropertyForm({ onDone }: { onDone: () => void }) {
           toast.error(parsed.error.issues[0]?.message ?? "Check the listing details");
           return;
         }
-        setSaving(true);
-        const { error } = await supabase.from("properties").insert({
-          ...parsed.data,
-          area: parsed.data.area || null,
-          image_url: parsed.data.image_url || null,
-          description: parsed.data.description || null,
-          published: true,
-        });
-        setSaving(false);
-        if (error) { toast.error(error.message); return; }
-        toast.success("Listing added");
-        setOpen(false);
-        onDone();
+        try {
+          await createPropertyFn({
+            data: {
+              ...parsed.data,
+              area: parsed.data.area || null,
+              image_url: parsed.data.image_url || null,
+              description: parsed.data.description || null,
+              published: true,
+            }
+          });
+          setSaving(false);
+          toast.success("Listing added");
+          setOpen(false);
+          onDone();
+        } catch (err: any) {
+          setSaving(false);
+          toast.error(err.message ?? "Could not add listing");
+        }
       }}
     >
       <h3 className="font-display text-xl">New listing</h3>
@@ -432,30 +448,14 @@ function AddAdminForm() {
             return;
           }
           setBusy(true);
-          const { data: profile, error: lookupError } = await supabase
-            .from("profiles")
-            .select("id")
-            .eq("email", parsed.data.toLowerCase())
-            .maybeSingle();
-          if (lookupError) {
+          try {
+            await addAdminFn({ data: parsed.data.toLowerCase() });
             setBusy(false);
-            toast.error(lookupError.message);
-            return;
-          }
-          if (!profile) {
+            toast.success("Admin access granted");
+          } catch (err: any) {
             setBusy(false);
-            toast.error("No account found with that email. Ask them to sign up first.");
-            return;
+            toast.error(err.message ?? "Could not add admin");
           }
-          const { error } = await supabase
-            .from("user_roles")
-            .insert({ user_id: profile.id, role: "admin" });
-          setBusy(false);
-          if (error) {
-            toast.error(error.message.includes("duplicate") ? "Already an admin" : error.message);
-            return;
-          }
-          toast.success("Admin access granted");
           setEmail("");
         }}
       >

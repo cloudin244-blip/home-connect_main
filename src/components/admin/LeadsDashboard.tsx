@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
-import { inquiriesQuery, leadsQuery } from "@/lib/site-data";
+import { inquiriesQuery, leadsQuery, updateInquiryHandledFn } from "@/lib/site-data";
 
 type Row = {
   id: string;
@@ -114,13 +114,13 @@ export function LeadsDashboard() {
   };
 
   const markHandled = async (id: string) => {
-    const { error } = await supabase.from("property_inquiries").update({ handled: true }).eq("id", id);
-    if (error) {
-      toast.error(error.message);
-      return;
+    try {
+      await updateInquiryHandledFn({ data: id });
+      toast.success("Marked as handled");
+      qc.invalidateQueries({ queryKey: ["property_inquiries"] });
+    } catch (err: any) {
+      toast.error(err.message ?? "Could not mark as handled");
     }
-    toast.success("Marked as handled");
-    qc.invalidateQueries({ queryKey: ["property_inquiries"] });
   };
 
   const loading = leadsLoading || inqLoading;
