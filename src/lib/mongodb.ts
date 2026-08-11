@@ -201,6 +201,13 @@ async function seedDatabaseIfEmpty(db: Db) {
 
   // 3. Seed Site Videos
   const videosCol = db.collection("site_videos");
+  
+  // Clean up any existing cartoon video references in the database
+  await videosCol.updateOne(
+    { section: "hero", video_url: "https://www.w3schools.com/html/mov_bbb.mp4" },
+    { $set: { video_url: "/videos/hero-building.mp4" } }
+  );
+
   const videosCount = await videosCol.countDocuments();
   if (videosCount === 0) {
     console.log("[MongoDB] Seeding site_videos collection...");
@@ -208,7 +215,7 @@ async function seedDatabaseIfEmpty(db: Db) {
       {
         title: "Hero Showcase Video",
         description: "Cinematic drone view of our key real-estate projects.",
-        video_url: "https://www.w3schools.com/html/mov_bbb.mp4",
+        video_url: "/videos/hero-building.mp4",
         section: "hero",
         sort_order: 1,
         published: true,
