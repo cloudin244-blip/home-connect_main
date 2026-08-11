@@ -54,32 +54,45 @@ export const Route = createFileRoute("/api/voice/transcribe")({
         const baseType = (audio.type || "audio/webm").split(";")[0]!;
 
         // Call Gemini 1.5 Flash to transcribe the audio file
-        const upstream = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              contents: [
-                {
-                  parts: [
-                    {
-                      inlineData: {
-                        mimeType: baseType,
-                        data: audioBase64,
+        let upstream: Response;
+        try {
+          upstream = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              signal: request.signal,
+              body: JSON.stringify({
+                contents: [
+                  {
+                    parts: [
+                      {
+                        inlineData: {
+                          mimeType: baseType,
+                          data: audioBase64,
+                        },
                       },
-                    },
-                    {
-                      text: "You are an audio transcription service. Please transcribe the provided speech audio exactly. Output ONLY the transcription text. Do not add any conversational filler, notes, or explanations.",
-                    },
-                  ],
-                },
-              ],
-            }),
+                      {
+                        text: "You are an audio transcription service. Please transcribe the provided speech audio exactly. Output ONLY the transcription text. Do not add any conversational filler, notes, or explanations.",
+                      },
+                    ],
+                  },
+                ],
+              }),
+            }
+          );
+        } catch (err: any) {
+          if (err.name === "AbortError" || request.signal.aborted) {
+            console.log("[transcribe] Request was aborted by client.");
+            return new Response(JSON.stringify({ error: "Request aborted by client" }), {
+              status: 499,
+              headers: { "Content-Type": "application/json" },
+            });
           }
-        );
+          throw err;
+        }
 
         if (!upstream.ok) {
           const detail = await upstream.text().catch(() => "");
