@@ -59,7 +59,7 @@ export type PropertyInquiry = {
   created_at: string;
 };
 
-export const WHATSAPP_FALLBACK = "https://chat.whatsapp.com/EImq5qltaWqHQQrxNfn7Ym";
+export const WHATSAPP_FALLBACK = "https://chat.whatsapp.com/F9nPARnrPPOFEcEIK1r5Vo";
 
 export const CONTACT_FALLBACK = {
   phone: "+91 93549 92890",

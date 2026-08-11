@@ -34,6 +34,13 @@ import {
 } from "@/lib/site-data";
 
 export const Route = createFileRoute("/property/$slug")({
+  loader: async ({ context, params }) => {
+    await Promise.all([
+      context.queryClient.ensureQueryData(propertyBySlugQuery(params.slug)),
+      context.queryClient.ensureQueryData(propertiesQuery),
+      context.queryClient.ensureQueryData(settingsQuery),
+    ]);
+  },
   head: ({ params }) => {
     const name = params.slug
       .split("-")
@@ -253,7 +260,7 @@ function PropertyDetail() {
           </div>
 
           {/* SIDEBAR */}
-          <aside className="lg:sticky lg:top-28 lg:self-start">
+          <aside className="w-full max-w-xl mx-auto lg:max-w-none lg:mx-0 lg:sticky lg:top-28 lg:self-start">
             <div className="rounded-lg border border-border bg-card p-6 shadow-card">
               <h2 className="font-display text-2xl">Enquire about this property</h2>
               <p className="mt-2 text-sm text-muted-foreground">

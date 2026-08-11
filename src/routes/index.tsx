@@ -40,6 +40,13 @@ import {
 } from "@/lib/site-data";
 
 export const Route = createFileRoute("/")({
+  loader: async ({ context }) => {
+    await Promise.all([
+      context.queryClient.ensureQueryData(propertiesQuery),
+      context.queryClient.ensureQueryData(videosQuery),
+      context.queryClient.ensureQueryData(settingsQuery),
+    ]);
+  },
   head: () => ({
     meta: [
       { title: "Prime Pure Real Estate | Pure Values. Prime Living." },
@@ -105,7 +112,7 @@ function Home() {
 
       <main>
         {/* HERO — building creation video */}
-        <section className="relative isolate overflow-hidden">
+        <section className="relative isolate overflow-hidden bg-navy-deep">
           <video
             className="h-[64vh] w-full object-cover md:h-[88vh]"
             src={cmsHero?.video_url ?? heroVideo.url}
@@ -113,7 +120,7 @@ function Home() {
             muted
             loop
             playsInline
-            preload="auto"
+            preload="metadata"
           />
           <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-navy-deep/40 via-transparent to-navy-deep/70" />
         </section>
@@ -308,7 +315,7 @@ function Home() {
 
         {/* ENQUIRY */}
         <section id="enquire" className="border-y border-border bg-secondary/50 py-24">
-          <div className="mx-auto grid max-w-7xl gap-12 px-6 lg:grid-cols-2">
+          <div className="mx-auto grid max-w-7xl gap-12 px-6 lg:grid-cols-2 lg:items-center">
             <div>
               <p className="text-eyebrow">Talk to an advisor</p>
               <h2 className="mt-3 font-display text-4xl md:text-5xl">Tell us what you are looking for</h2>
@@ -335,7 +342,7 @@ function Home() {
                 </div>
               </dl>
             </div>
-            <div className="rounded-lg border border-border bg-card p-7 shadow-card">
+            <div className="w-full max-w-xl mx-auto rounded-lg border border-border bg-card p-7 shadow-card lg:max-w-none lg:mx-0">
               <EnquiryForm />
             </div>
           </div>

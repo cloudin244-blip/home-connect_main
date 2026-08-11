@@ -26,6 +26,9 @@ export const Route = createFileRoute("/properties")({
   validateSearch: (search: Record<string, unknown>): SearchParams => ({
     intent: typeof search["intent"] === "string" ? search["intent"] : "all",
   }),
+  loader: async ({ context }) => {
+    await context.queryClient.ensureQueryData(propertiesQuery);
+  },
   head: () => ({
     meta: [
       { title: "Properties for sale & rent | Prime Pure Real Estate" },

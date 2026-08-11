@@ -140,7 +140,7 @@ CREATE POLICY "site_settings_public_read" ON public.site_settings FOR SELECT TO 
 CREATE POLICY "site_settings_staff_write" ON public.site_settings FOR ALL TO authenticated USING (public.is_staff(auth.uid())) WITH CHECK (public.is_staff(auth.uid()));
 
 INSERT INTO public.site_settings (key, value) VALUES
-  ('whatsapp_community_url','https://chat.whatsapp.com/EImq5qltaWqHQQrxNfn7Ym'),
+  ('whatsapp_community_url','https://chat.whatsapp.com/F9nPARnrPPOFEcEIK1r5Vo'),
   ('hero_title','Pure Values. Prime Living.'),
   ('hero_subtitle','Handpicked residences, transparent pricing and advisors who stay with you from first visit to final key.'),
   ('phone','+91 96606 19500'),

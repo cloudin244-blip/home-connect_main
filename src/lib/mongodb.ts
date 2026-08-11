@@ -31,7 +31,7 @@ async function seedDatabaseIfEmpty(db: Db) {
   if (settingsCount === 0) {
     console.log("[MongoDB] Seeding site_settings collection...");
     await settingsCol.insertMany([
-      { key: "whatsapp_community_url", value: "https://chat.whatsapp.com/EImq5qltaWqHQQrxNfn7Ym", updated_at: new Date() },
+      { key: "whatsapp_community_url", value: "https://chat.whatsapp.com/F9nPARnrPPOFEcEIK1r5Vo", updated_at: new Date() },
       { key: "hero_title", value: "Pure Values. Prime Living.", updated_at: new Date() },
       { key: "hero_subtitle", value: "Handpicked residences, transparent pricing and advisors who stay with you from first visit to final key.", updated_at: new Date() },
       { key: "phone", value: "+91 93549 92890", updated_at: new Date() },

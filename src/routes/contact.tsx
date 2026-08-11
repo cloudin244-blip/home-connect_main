@@ -22,6 +22,9 @@ const schema = z.object({
 });
 
 export const Route = createFileRoute("/contact")({
+  loader: async ({ context }) => {
+    await context.queryClient.ensureQueryData(settingsQuery);
+  },
   head: () => ({
     meta: [
       { title: "Contact Prime Pure Real Estate | Book a site visit" },
@@ -82,7 +85,7 @@ function ContactPage() {
   return (
     <div className="min-h-screen bg-background">
       <SiteHeader />
-      <main className="mx-auto grid max-w-7xl gap-14 px-6 py-16 lg:grid-cols-2">
+      <main className="mx-auto grid max-w-7xl gap-14 px-6 py-16 lg:grid-cols-2 lg:items-center">
         <div>
           <p className="text-eyebrow">Get in touch</p>
           <h1 className="mt-3 font-display text-4xl md:text-5xl">Let's find your prime address</h1>
@@ -112,7 +115,7 @@ function ContactPage() {
           </Button>
         </div>
 
-        <form onSubmit={submit} className="space-y-5 rounded-lg border border-border bg-card p-7 shadow-card">
+        <form onSubmit={submit} className="w-full max-w-xl mx-auto space-y-5 rounded-lg border border-border bg-card p-7 shadow-card lg:max-w-none lg:mx-0">
           <div className="space-y-2">
             <Label htmlFor="name">Full name</Label>
             <Input id="name" value={form.name} maxLength={80} onChange={(e) => setForm({ ...form, name: e.target.value })} />
