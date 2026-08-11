@@ -36,9 +36,9 @@ import {
 export const Route = createFileRoute("/property/$slug")({
   loader: async ({ context, params }) => {
     await Promise.all([
-      context.queryClient.ensureQueryData(propertyBySlugQuery(params.slug)),
-      context.queryClient.ensureQueryData(propertiesQuery),
-      context.queryClient.ensureQueryData(settingsQuery),
+      context.queryClient.ensureQueryData(propertyBySlugQuery(params.slug)).catch((err) => console.error("Prefetch property by slug failed:", err)),
+      context.queryClient.ensureQueryData(propertiesQuery).catch((err) => console.error("Prefetch properties failed:", err)),
+      context.queryClient.ensureQueryData(settingsQuery).catch((err) => console.error("Prefetch settings failed:", err)),
     ]);
   },
   head: ({ params }) => {

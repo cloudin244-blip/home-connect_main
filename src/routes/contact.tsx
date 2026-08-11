@@ -23,7 +23,7 @@ const schema = z.object({
 
 export const Route = createFileRoute("/contact")({
   loader: async ({ context }) => {
-    await context.queryClient.ensureQueryData(settingsQuery);
+    await context.queryClient.ensureQueryData(settingsQuery).catch((err) => console.error("Prefetch settings failed:", err));
   },
   head: () => ({
     meta: [

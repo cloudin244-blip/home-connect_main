@@ -27,7 +27,7 @@ export const Route = createFileRoute("/properties")({
     intent: typeof search["intent"] === "string" ? search["intent"] : "all",
   }),
   loader: async ({ context }) => {
-    await context.queryClient.ensureQueryData(propertiesQuery);
+    await context.queryClient.ensureQueryData(propertiesQuery).catch((err) => console.error("Prefetch properties failed:", err));
   },
   head: () => ({
     meta: [

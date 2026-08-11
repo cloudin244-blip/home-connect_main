@@ -42,9 +42,9 @@ import {
 export const Route = createFileRoute("/")({
   loader: async ({ context }) => {
     await Promise.all([
-      context.queryClient.ensureQueryData(propertiesQuery),
-      context.queryClient.ensureQueryData(videosQuery),
-      context.queryClient.ensureQueryData(settingsQuery),
+      context.queryClient.ensureQueryData(propertiesQuery).catch((err) => console.error("Prefetch properties failed:", err)),
+      context.queryClient.ensureQueryData(videosQuery).catch((err) => console.error("Prefetch videos failed:", err)),
+      context.queryClient.ensureQueryData(settingsQuery).catch((err) => console.error("Prefetch settings failed:", err)),
     ]);
   },
   head: () => ({
