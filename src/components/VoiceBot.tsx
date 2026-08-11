@@ -163,43 +163,39 @@ export function VoiceBot() {
     };
   }, [open]);
 
-  /** Speaks text and resolves once playback finishes (or fails). */
   const speak = useCallback(async (text: string) => {
     lastSpokenRef.current = text;
+    if (typeof window === "undefined" || !window.speechSynthesis) {
+      console.warn("speechSynthesis not supported in this browser");
+      return;
+    }
     try {
       setSpeaking(true);
-      const res = await fetch("/api/voice/speak", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text }),
-      });
-      if (!res.ok) throw new Error(`speak ${res.status}`);
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      audioRef.current?.pause();
-      const audio = new Audio(url);
-      audioRef.current = audio;
+      window.speechSynthesis.cancel(); // Stop any ongoing speech
+
+      const utterance = new SpeechSynthesisUtterance(text);
+      
+      // Try to find a warm Indian English voice, or default English
+      const voices = window.speechSynthesis.getVoices();
+      const indianVoice = voices.find(v => v.lang.includes("en-IN")) || 
+                          voices.find(v => v.lang.startsWith("en"));
+      
+      if (indianVoice) {
+        utterance.voice = indianVoice;
+      }
+      
+      utterance.rate = 0.95; // Slightly slower for clear, warm real-estate assistance
+      utterance.pitch = 1.0;
+
       await new Promise<void>((resolve) => {
-        audio.onended = () => {
-          URL.revokeObjectURL(url);
-          setAudioBlocked(false);
-          resolve();
-        };
-        audio.onerror = () => {
-          setAudioBlocked(true);
-          resolve();
-        };
-        void audio
-          .play()
-          .then(() => setAudioBlocked(false))
-          .catch(() => {
-            // Browser blocked autoplay — offer a tap-to-play retry.
-            setAudioBlocked(true);
-            resolve();
-          });
+        utterance.onend = () => resolve();
+        utterance.onerror = () => resolve();
+        window.speechSynthesis.speak(utterance);
       });
+      
+      setAudioBlocked(false);
     } catch (error) {
-      console.error(error);
+      console.error("Speech synthesis error:", error);
       setAudioBlocked(true);
     } finally {
       setSpeaking(false);
