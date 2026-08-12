@@ -47,7 +47,7 @@ function ContactPage() {
   const { data: settings } = useQuery(settingsQuery);
   const whatsapp = settings?.["whatsapp_community_url"] ?? WHATSAPP_FALLBACK;
   const phone = settings?.["phone"] ?? "+91 96606 19500";
-  const email = settings?.["email"] ?? "k96606195@gmail.com";
+  const email = settings?.["email"] ?? "sales@primepurerealestate.in";
   const address = settings?.["address"] ?? "Prime Pure Real Estate, Noida, India";
 
   const [form, setForm] = useState({ name: "", mobile: "", email: "", notes: "" });

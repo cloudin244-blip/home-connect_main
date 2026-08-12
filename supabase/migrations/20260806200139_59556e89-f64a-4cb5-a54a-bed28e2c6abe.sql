@@ -144,7 +144,7 @@ INSERT INTO public.site_settings (key, value) VALUES
   ('hero_title','Pure Values. Prime Living.'),
   ('hero_subtitle','Handpicked residences, transparent pricing and advisors who stay with you from first visit to final key.'),
   ('phone','+91 96606 19500'),
-  ('email','k96606195@gmail.com'),
+  ('email','sales@primepurerealestate.in'),
   ('address','Prime Pure Real Estate, Sector 62, Noida, India');
 
 INSERT INTO public.properties (title, location, price, bedrooms, bathrooms, area, property_type, status, image_url, description, featured, sort_order) VALUES
