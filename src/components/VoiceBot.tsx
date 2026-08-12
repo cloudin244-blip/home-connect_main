@@ -440,7 +440,7 @@ export function VoiceBot() {
       )}
 
       {open && (
-        <div className="fixed bottom-5 right-5 z-50 max-h-[86vh] w-[min(94vw,23rem)] overflow-y-auto rounded-lg border border-border bg-card shadow-elegant animate-rise-in">
+        <div className="fixed bottom-5 left-5 right-5 md:left-auto md:right-5 z-50 max-h-[86vh] w-auto md:w-[23rem] overflow-y-auto rounded-lg border border-border bg-card shadow-elegant animate-rise-in">
           <div className="surface-navy flex items-center justify-between px-4 py-3">
             <div className="flex items-center gap-2">
               <Sparkles className="size-4 text-accent" />
