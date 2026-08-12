@@ -15,7 +15,7 @@ export default defineConfig({
     }),
     react(),
     nitro({
-      preset: "node-server",
+      preset: process.env.NITRO_PRESET || (process.env.VERCEL ? "vercel" : "node-server"),
     }),
   ],
 });
