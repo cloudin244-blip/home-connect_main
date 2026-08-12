@@ -121,6 +121,7 @@ function Home() {
             loop
             playsInline
             preload="metadata"
+            poster="/images/properties/bangalore-tower.jpg"
           />
           <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-navy-deep/40 via-transparent to-navy-deep/70" />
         </section>
@@ -163,29 +164,40 @@ function Home() {
           </div>
 
           <div className="mt-12 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {agentVideos.slice(0, 5).map((video, index) => (
-              <article
-                key={video.title + index}
-                className={`group overflow-hidden rounded-lg border border-border bg-card shadow-card ${
-                  index === 0 ? "lg:col-span-2" : ""
-                }`}
-              >
-                <video
-                  className="aspect-video w-full object-cover"
-                  src={video.video_url}
-                  controls
-                  playsInline
-                  preload="metadata"
-                />
-                <div className="p-5">
-                  <div className="flex items-center gap-2">
-                    <Play className="size-3.5 text-accent" />
-                    <h3 className="font-display text-xl">{video.title}</h3>
+            {agentVideos.slice(0, 5).map((video, index) => {
+              const posters = [
+                "/images/properties/skyline-residences.jpg",
+                "/images/properties/central-offices.jpg",
+                "/images/properties/green-plots.jpg",
+                "/images/properties/heights-penthouse.jpg",
+                "/images/properties/garden-villas.jpg",
+              ];
+              const poster = posters[index % posters.length];
+              return (
+                <article
+                  key={video.title + index}
+                  className={`group overflow-hidden rounded-lg border border-border bg-card shadow-card ${
+                    index === 0 ? "lg:col-span-2" : ""
+                  }`}
+                >
+                  <video
+                    className="aspect-video w-full object-cover"
+                    src={video.video_url}
+                    controls
+                    playsInline
+                    preload="none"
+                    poster={poster}
+                  />
+                  <div className="p-5">
+                    <div className="flex items-center gap-2">
+                      <Play className="size-3.5 text-accent" />
+                      <h3 className="font-display text-xl">{video.title}</h3>
+                    </div>
+                    <p className="mt-2 text-sm text-muted-foreground">{video.description}</p>
                   </div>
-                  <p className="mt-2 text-sm text-muted-foreground">{video.description}</p>
-                </div>
-              </article>
-            ))}
+                </article>
+              );
+            })}
           </div>
 
           {/* STATS — moved below videos */}
